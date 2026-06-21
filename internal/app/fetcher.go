@@ -207,9 +207,10 @@ func fetchAndCleanHTML(baseURLStr string, ignoreList []string, urlToFootnote map
 		}
 
 		u, err := url.Parse(href)
-		if err == nil {
-			href = baseURL.ResolveReference(u).String()
+		if err != nil {
+			return
 		}
+		href = baseURL.ResolveReference(u).String()
 
 		ext := strings.ToLower(filepath.Ext(u.Path))
 		if ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" {
