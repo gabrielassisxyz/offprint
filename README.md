@@ -13,7 +13,7 @@ Offprint is usable but still early. Substack export depends on internal API endp
 Prebuilt binaries are published for Linux, macOS, and Windows on each `v*` release.
 
 ```sh
-curl -fsSL "https://raw.githubusercontent.com/gabrielassisxyz/offprint/master/install.sh?$(date +%s)" | bash
+curl -fsSL "https://raw.githubusercontent.com/gabrielassisxyz/offprint/main/install.sh?$(date +%s)" | bash
 ```
 
 The installer verifies the release checksum and writes to `~/.local/bin` by default. Alternatively, download a release manually or build from source:
@@ -67,17 +67,17 @@ offprint archive publications.txt
 offprint archive --input publications.txt
 ```
 
-### Build HTML and PDF from articles
+### Bundle articles into HTML and PDF
 
-`render` accepts either one article URL or a file containing URLs:
+`bundle` accepts either one article URL or a file containing URLs. It downloads and cleans each article, creates a table of contents and references, then combines everything into one printable document:
 
 ```sh
-offprint render --name reading-list --format both links.txt
-offprint render --format pdf https://example.com/an-article
-offprint render --format html --output /tmp/offprint links.txt
+offprint bundle --name reading-list --format both links.txt
+offprint bundle --format pdf https://example.com/an-article
+offprint bundle --format html --output /tmp/offprint links.txt
 ```
 
-Available formats are `markdown` through `archive`, and `html`, `pdf`, or `both` through `render`.
+Available formats are `markdown` through `archive`, and `html`, `pdf`, or `both` through `bundle`.
 
 ## Fonts
 
@@ -86,7 +86,7 @@ Generated documents use the system serif stack (`Georgia`, `Times New Roman`, th
 Pass a local TTF, OTF, or WOFF file when needed:
 
 ```sh
-offprint render --font ~/Library/Fonts/MyFont.ttf links.txt
+offprint bundle --font ~/Library/Fonts/MyFont.ttf links.txt
 ```
 
 The font is embedded into the generated document. The local `fonts/` directory is ignored by Git and may be used for personal files.
@@ -111,16 +111,37 @@ The store defaults to the operating system's user configuration directory, such 
 Chromium web security remains enabled by default. Some unusual local-page workflows may require:
 
 ```sh
-offprint render --disable-web-security links.txt
+offprint bundle --disable-web-security links.txt
 ```
 
 This weakens browser isolation. Use it only with content and assets you trust.
 
-## Domain extraction configuration
+## CSS and site extraction profiles
 
-Default extraction rules and CSS are embedded in the binary, so Offprint does not depend on the checkout or current working directory after installation.
+Offprint ships with a generic print stylesheet and generic HTML extraction fallbacks. Personal site profiles are loaded from the operating system's user configuration directory:
 
-Supply an alternative `domains.json` with `--domains-file`. Each domain may define selectors for the title, subtitle and body, elements to remove, presentation options, custom CSS and structural transformations. See [`internal/assets/domains.json`](internal/assets/domains.json) for the current schema and example.
+```text
+~/.config/offprint/
+├── sites/
+│   └── example.json
+└── styles/
+    └── example.css
+```
+
+On macOS and Windows, Offprint uses the platform-specific user configuration directory. Use `--config-dir` to select another location.
+
+Each file in `sites/*.json` maps domains to extraction settings. Relative `custom_css_path` values are resolved from the profile file, not the current working directory. Profiles loaded later override built-in profiles for the same domain. `--site-profile` loads one additional profile with highest precedence.
+
+Use `--css` for document-wide styling independent of the source site:
+
+```sh
+offprint bundle --css ~/styles/study.css links.txt
+offprint bundle --config-dir ~/my-offprint-config links.txt
+```
+
+The generic stylesheet is available at [`internal/assets/base.css`](internal/assets/base.css). Built-in site profiles live in [`internal/assets/sites.json`](internal/assets/sites.json); new profiles should only be added with fixtures and extraction tests.
+
+Copy [`examples/sites/example.json`](examples/sites/example.json) and [`examples/styles/example.css`](examples/styles/example.css) into your configuration directory to start a personal profile without modifying the repository.
 
 ## Output and local state
 
@@ -128,7 +149,7 @@ Supply an alternative `domains.json` with `--domains-file`. Each domain may defi
 |---|---|---|
 | Archives and documents | `~/Documents/Offprint` | `--output` |
 | HTTP/image/title cache | OS user cache directory under `offprint/` | `OFFPRINT_CACHE_DIR` |
-| Persisted generic cookies | OS user config directory under `offprint/` | `--store` on `cookies set` |
+| Profiles, styles and cookies | OS user config directory under `offprint/` | `--config-dir` / `--store` |
 | Custom font | none | `--font PATH` |
 
 ## Project structure
@@ -136,13 +157,13 @@ Supply an alternative `domains.json` with `--domains-file`. Each domain may defi
 ```text
 cmd/offprint/       Binary entry point
 internal/app/       CLI orchestration and current application pipeline
-internal/assets/    Embedded extraction rules and default CSS
+internal/assets/    Generic CSS and tested built-in site profiles
 bin/ci              Local and hosted CI gate
 bin/install-hooks   Installs the versioned gitleaks pre-commit hook
 .github/workflows/  CI and tag-triggered releases
 ```
 
-The code intentionally starts with a cohesive `internal/app` package instead of speculative `source/` and `render/` abstractions. Domain packages should be extracted when additional sources or renderers create proven boundaries.
+The code intentionally starts with a cohesive `internal/app` package instead of speculative source and output abstractions. Domain packages should be extracted when additional sources or bundle formats create proven boundaries.
 
 ## Development
 

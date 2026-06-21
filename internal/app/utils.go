@@ -66,6 +66,13 @@ func defaultOutputDir() string {
 	return filepath.Join(home, "Documents", "Offprint")
 }
 
+func defaultConfigDir() string {
+	if dir, err := os.UserConfigDir(); err == nil {
+		return filepath.Join(dir, "offprint")
+	}
+	return filepath.Join(".offprint")
+}
+
 func defaultCacheDir() string {
 	if configured := strings.TrimSpace(os.Getenv("OFFPRINT_CACHE_DIR")); configured != "" {
 		return configured

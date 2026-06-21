@@ -69,7 +69,10 @@ func Main() {
 		return
 	}
 	if len(os.Args) >= 2 && os.Args[1] == "render" {
-		cleanup, err := normalizeRenderCommand(os.Args[2:])
+		log.Fatal(`command "render" was renamed; use "offprint bundle" instead`)
+	}
+	if len(os.Args) >= 2 && os.Args[1] == "bundle" {
+		cleanup, err := normalizeBundleCommand(os.Args[2:])
 		if err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return
@@ -88,6 +91,8 @@ func Main() {
 	outputDir := flag.String("output-dir", defaultOutputDir(), "Base output directory")
 	outputFormat := flag.String("format", "both", "Output format: html, pdf, or both")
 	fontPath := flag.String("font", "", "Optional TTF/OTF/WOFF font file")
+	cssPath := flag.String("css", "", "Optional CSS applied to the complete document")
+	configDir := flag.String("config-dir", defaultConfigDir(), "Offprint configuration directory")
 	domainsFile := flag.String("domains-file", "", "Optional domain extraction configuration")
 	disableWebSecurity := flag.Bool("disable-web-security", false, "Disable Chromium web security (unsafe; use only for trusted content)")
 	ignoreStr := flag.String("ignore", "", "Comma-separated list to ignore in titles (e.g., \" - Wikipedia\")")
@@ -99,10 +104,13 @@ func Main() {
 	if err := loadCookies(defaultCookiesFile()); err != nil {
 		log.Printf("warning: %v", err)
 	}
-	if err := loadDomainConfigs(*domainsFile); err != nil {
+	if err := loadDomainConfigs(*configDir, *domainsFile); err != nil {
 		log.Fatal(err)
 	}
 	if err := configureFont(*fontPath); err != nil {
+		log.Fatal(err)
+	}
+	if err := configureDocumentCSS(*cssPath); err != nil {
 		log.Fatal(err)
 	}
 	if *outputFormat != "html" && *outputFormat != "pdf" && *outputFormat != "both" {
@@ -301,14 +309,14 @@ func printHelp() {
 
 Usage:
   offprint archive [flags] <archive-url|url-file>
-  offprint render [flags] <article-url|url-file>
+  offprint bundle [flags] <article-url|url-file>
   offprint cookies set --domain DOMAIN [--from-env NAME|--file PATH]
   offprint version
 
 Examples:
   offprint archive https://example.substack.com/archive
   offprint archive --input publications.txt --output ~/Documents/Offprint
-  offprint render --format both --name reading-list links.txt
+  offprint bundle --format both --name reading-list links.txt
 
 Run "offprint <command> --help" for command flags.
 `)
@@ -359,14 +367,16 @@ func runArchiveCommand(args []string) error {
 	return nil
 }
 
-func normalizeRenderCommand(args []string) (func(), error) {
-	set := flag.NewFlagSet("render", flag.ContinueOnError)
+func normalizeBundleCommand(args []string) (func(), error) {
+	set := flag.NewFlagSet("bundle", flag.ContinueOnError)
 	inputFlag := set.String("input", "", "article URL or file containing article URLs")
 	output := set.String("output", defaultOutputDir(), "output directory")
 	name := set.String("name", "ebook", "output collection name")
 	format := set.String("format", "both", "output format: html, pdf, or both")
 	font := set.String("font", "", "optional TTF/OTF/WOFF font file")
-	domains := set.String("domains-file", "", "optional domain extraction configuration")
+	css := set.String("css", "", "optional CSS applied to the complete document")
+	configDir := set.String("config-dir", defaultConfigDir(), "Offprint configuration directory")
+	siteProfile := set.String("site-profile", "", "additional site profile JSON with highest precedence")
 	disableSecurity := set.Bool("disable-web-security", false, "disable Chromium web security (unsafe)")
 	columns := set.Int("columns", 1, "number of text columns")
 	fontSize := set.Int("font-size", 11, "font size in pixels")
@@ -379,7 +389,7 @@ func normalizeRenderCommand(args []string) (func(), error) {
 		input = set.Arg(0)
 	}
 	if input == "" {
-		return func() {}, fmt.Errorf("render input is required; pass a URL or URL file")
+		return func() {}, fmt.Errorf("bundle input is required; pass a URL or URL file")
 	}
 	urls, err := readURLInput(input)
 	if err != nil {
@@ -402,12 +412,15 @@ func normalizeRenderCommand(args []string) (func(), error) {
 		return func() {}, err
 	}
 
-	os.Args = []string{os.Args[0], "-i", temp.Name(), "-output-dir", *output, "-o", *name + ".pdf", "-format", *format, "-cols", fmt.Sprint(*columns), "-fontsize", fmt.Sprint(*fontSize)}
+	os.Args = []string{os.Args[0], "-i", temp.Name(), "-output-dir", *output, "-o", *name + ".pdf", "-format", *format, "-cols", fmt.Sprint(*columns), "-fontsize", fmt.Sprint(*fontSize), "-config-dir", *configDir}
 	if *font != "" {
 		os.Args = append(os.Args, "-font", *font)
 	}
-	if *domains != "" {
-		os.Args = append(os.Args, "-domains-file", *domains)
+	if *css != "" {
+		os.Args = append(os.Args, "-css", *css)
+	}
+	if *siteProfile != "" {
+		os.Args = append(os.Args, "-domains-file", *siteProfile)
 	}
 	if *disableSecurity {
 		os.Args = append(os.Args, "-disable-web-security")

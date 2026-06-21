@@ -1,0 +1,44 @@
+@page {
+  size: A4;
+  margin: 20mm;
+}
+
+body {
+  font-family: var(--offprint-font-family);
+  font-size: var(--offprint-font-size);
+  line-height: 1.6;
+  color: #333;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+.content {
+  display: flow-root;
+}
+
+h1.doc-title {
+  color: #000;
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 24px;
+}
+
+.source-link {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 20px;
+  display: block;
+  font-style: italic;
+  border-bottom: 1px dotted #000;
+}
+
+p {
+  margin-bottom: 1.2em;
+  text-align: justify;
+}
+
+a {
+  color: #0056b3;
+  text-decoration: none;
+  border-bottom: 1px dotted #0056b3;
+}

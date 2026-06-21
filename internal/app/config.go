@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/gabrielassisxyz/offprint/internal/assets"
@@ -36,22 +38,63 @@ type DomainConfig struct {
 	ShowSeparator    bool            `json:"show_separator"`
 	CustomCSSPath    string          `json:"custom_css_path"`
 	Transformations  []TransformRule `json:"transformations"` // NEW: Dynamic structural rewrites
+	CustomCSS        string          `json:"-"`
 }
 
 var domainConfigs map[string]DomainConfig
 
-func loadDomainConfigs(path string) error {
+func loadDomainConfigs(configDir, explicitPath string) error {
 	domainConfigs = make(map[string]DomainConfig)
-	data := assets.DomainsJSON
-	if path != "" {
-		var err error
-		data, err = os.ReadFile(path)
+	if err := mergeDomainConfigs(assets.SitesJSON, ""); err != nil {
+		return fmt.Errorf("parse built-in site profiles: %w", err)
+	}
+
+	paths, err := filepath.Glob(filepath.Join(configDir, "sites", "*.json"))
+	if err != nil {
+		return fmt.Errorf("find user site profiles: %w", err)
+	}
+	sort.Strings(paths)
+	if explicitPath != "" {
+		paths = append(paths, explicitPath)
+	}
+	for _, path := range paths {
+		data, err := os.ReadFile(path)
 		if err != nil {
-			return fmt.Errorf("read domain configuration %q: %w", path, err)
+			return fmt.Errorf("read site profile %q: %w", path, err)
+		}
+		if err := mergeDomainConfigs(data, path); err != nil {
+			return fmt.Errorf("parse site profile %q: %w", path, err)
 		}
 	}
-	if err := json.Unmarshal(data, &domainConfigs); err != nil {
-		return fmt.Errorf("parse domain configuration: %w", err)
+	return nil
+}
+
+func mergeDomainConfigs(data []byte, sourcePath string) error {
+	var profiles map[string]DomainConfig
+	if err := json.Unmarshal(data, &profiles); err != nil {
+		return err
+	}
+	for domain, profile := range profiles {
+		domain = strings.ToLower(strings.TrimSpace(domain))
+		if domain == "" {
+			return fmt.Errorf("site profile contains an empty domain")
+		}
+		if profile.CustomCSSPath != "" {
+			cssPath := profile.CustomCSSPath
+			if !filepath.IsAbs(cssPath) {
+				if sourcePath == "" {
+					return fmt.Errorf("built-in profile %q uses a non-embedded CSS path", domain)
+				}
+				cssPath = filepath.Join(filepath.Dir(sourcePath), cssPath)
+			}
+			css, err := os.ReadFile(cssPath)
+			if err != nil {
+				return fmt.Errorf("read CSS for %q from %q: %w", domain, cssPath, err)
+			}
+			profile.CustomCSSPath = filepath.Clean(cssPath)
+			profile.CustomCSS = string(css)
+		}
+		domainConfigs[domain] = profile
 	}
 	return nil
 }
@@ -61,12 +104,15 @@ func getDomainConfig(targetURL string) DomainConfig {
 	if err != nil {
 		return DomainConfig{}
 	}
-	host := parsed.Hostname()
+	host := strings.ToLower(parsed.Hostname())
 
+	bestDomain := ""
+	bestConfig := DomainConfig{}
 	for domain, config := range domainConfigs {
-		if host == domain || strings.HasSuffix(host, "."+domain) {
-			return config
+		if (host == domain || strings.HasSuffix(host, "."+domain)) && len(domain) > len(bestDomain) {
+			bestDomain = domain
+			bestConfig = config
 		}
 	}
-	return DomainConfig{} // Return empty if no custom config is found
+	return bestConfig
 }

@@ -1,0 +1,17 @@
+{
+  "example.com": {
+    "title_selector": "article h1",
+    "subtitle_selector": "article .subtitle",
+    "body_selector": "article",
+    "remove_selectors": [
+      "nav",
+      ".newsletter-signup",
+      ".share-buttons"
+    ],
+    "source_position": "bottom",
+    "title_align": "left",
+    "subtitle_align": "left",
+    "show_separator": true,
+    "custom_css_path": "../styles/example.css"
+  }
+}
