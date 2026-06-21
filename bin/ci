@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "==> gofmt"
+unformatted="$(gofmt -l .)"
+if [[ -n "$unformatted" ]]; then
+  printf '%s\n' "$unformatted"
+  echo "Run: gofmt -w ." >&2
+  exit 1
+fi
+
+echo "==> go vet"
+go vet ./...
+
+echo "==> golangci-lint"
+golangci-lint run
+
+echo "==> tests"
+go test -race ./...
+
+echo "==> govulncheck"
+govulncheck ./...
+
+echo "CI green."

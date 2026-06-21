@@ -1,0 +1,29 @@
+# Secrets and local configuration
+/cookies.json
+.env
+.env.*
+!.env.example
+
+# Generated content
+/.cache/
+/output/
+fonts/
+/*.html
+/*.pdf
+/offprint
+*.test
+
+# Scratch files and obsolete local copies
+*.bk
+*.bak
+/.old/
+/_cloned/
+/links
+/link-*
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
