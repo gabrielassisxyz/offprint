@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install Offprint from GitHub Releases:
-#   curl -fsSL "https://raw.githubusercontent.com/gabrielassisxyz/offprint/master/install.sh?$(date +%s)" | bash
+#   curl -fsSL "https://raw.githubusercontent.com/gabrielassisxyz/offprint/main/install.sh?$(date +%s)" | bash
 set -euo pipefail
 umask 022
 

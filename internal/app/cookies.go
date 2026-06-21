@@ -17,10 +17,7 @@ type CookieMap map[string]map[string]string
 var domainCookies map[string][]*http.Cookie
 
 func defaultCookiesFile() string {
-	if dir, err := os.UserConfigDir(); err == nil {
-		return filepath.Join(dir, "offprint", "cookies.json")
-	}
-	return filepath.Join(".offprint", "cookies.json")
+	return filepath.Join(defaultConfigDir(), "cookies.json")
 }
 
 func handleCookieCommand(args []string) error {

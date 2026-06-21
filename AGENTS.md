@@ -52,7 +52,7 @@
 
 ## Git: branches, commits, PRs, comments
 
-- **Default branch is `master`** (not `main`). Never commit directly to it; branch, then PR.
+- **Default branch is `main`.** Never commit directly to it; branch, then PR.
 - **Branches** — Conventional Branch (conventionalbranch.org): `<type>/<kebab-description>`,
   types `feature/`, `bugfix/`, `hotfix/`, `chore/`, `release/`, `docs/`.
 - **Commits** — Conventional Commits (conventionalcommits.org): `<type>(scope): <description>`,

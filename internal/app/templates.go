@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	fontCSS    string
-	fontFamily = `Georgia, "Times New Roman", serif`
+	fontCSS           string
+	fontFamily        = `Georgia, "Times New Roman", serif`
+	customDocumentCSS string
 )
 
 func configureFont(path string) error {
@@ -41,26 +42,36 @@ func getFontCSS() string {
 	return fontCSS
 }
 
+func configureDocumentCSS(path string) error {
+	customDocumentCSS = ""
+	if path == "" {
+		return nil
+	}
+	css, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read custom CSS %q: %w", path, err)
+	}
+	customDocumentCSS = string(css)
+	return nil
+}
+
 func getBaseStyles(fontSize, cols int) (string, string) {
 	columnCSS := ""
 	imgCSS := `img { max-width: 45%; height: auto; float: right; margin: 10px 0 15px 20px; border-radius: 4px; }`
 
 	if cols > 1 {
 		columnCSS = fmt.Sprintf("column-count: %d; column-gap: 8mm;", cols)
-		imgCSS = `img { max-width: 100%%; height: auto; display: block; margin: 15px auto; border-radius: 4px; }`
+		imgCSS = `img { max-width: 100%; height: auto; display: block; margin: 15px auto; border-radius: 4px; }`
 	}
 
 	coreCSS := fmt.Sprintf(`
 		%s
-		@page { size: A4; margin: 20mm; }
-		body { font-family: %s; font-size: %dpx; line-height: 1.6; color: #333; -webkit-text-size-adjust: 100%%; text-size-adjust: 100%%; }
-		.content { display: flow-root; %s }
-		h1.doc-title { text-align: center; color: #000; margin-top: 0px; margin-bottom: 10px; font-size: 24px; }
-		.source-link { text-align: center; font-size: 12px; color: #666; margin-bottom: 20px; display: block; font-style: italic; border-bottom: 1px dotted #000; }
-		p { margin-bottom: 1.2em; text-align: justify; }
-		a { color: #0056b3; text-decoration: none; border-bottom: 1px dotted #0056b3; }
+		:root { --offprint-font-family: %s; --offprint-font-size: %dpx; }
 		%s
-	`, getFontCSS(), fontFamily, fontSize, columnCSS, imgCSS)
+		.content { %s }
+		%s
+		%s
+	`, getFontCSS(), fontFamily, fontSize, assets.BaseCSS, columnCSS, imgCSS, customDocumentCSS)
 
 	return coreCSS, columnCSS
 }
@@ -221,15 +232,8 @@ func buildArticleWrapper(e *Entry) (string, string, string) {
 	}
 
 	customCSS := ""
-	if e.Config.CustomCSSPath != "" {
-		cssBytes, err := os.ReadFile(e.Config.CustomCSSPath)
-		if err != nil && e.Config.CustomCSSPath == "css/karlsson.css" {
-			cssBytes = assets.KarlssonCSS
-			err = nil
-		}
-		if err == nil {
-			customCSS = fmt.Sprintf("<style>\n%s\n</style>\n", string(cssBytes))
-		}
+	if e.Config.CustomCSS != "" {
+		customCSS = fmt.Sprintf("<style>\n%s\n</style>\n", e.Config.CustomCSS)
 	}
 
 	return header, footer, customCSS

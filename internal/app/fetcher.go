@@ -162,9 +162,12 @@ func fetchAndCleanHTML(baseURLStr string, ignoreList []string, urlToFootnote map
 				}
 
 				// Get either the text or the attribute
-				if extRule.Attr == "text" {
+				switch extRule.Attr {
+				case "text":
 					extractedValue = strings.TrimSpace(targetNode.Text())
-				} else {
+				case "html":
+					extractedValue, _ = targetNode.Html()
+				default:
 					extractedValue, _ = targetNode.Attr(extRule.Attr)
 				}
 
