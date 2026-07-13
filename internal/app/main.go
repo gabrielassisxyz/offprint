@@ -124,6 +124,20 @@ func Main() {
 		return
 	}
 
+	// Everything past this point can reach chromedp, so make sure a browser exists before a
+	// single article is downloaded. chromedp only finds out when it first tries to launch —
+	// three phases in, after every page has been fetched and rendered — and says
+	// `exec: "google-chrome": executable file not found in $PATH`: a binary the user may not
+	// even want (machines with `chromium` see this), and no hint of what to do. Failing here
+	// costs nothing; failing there costs the whole download.
+	//
+	// --format html never launches a browser, and --archive above never reaches here.
+	if *outputFormat != "html" {
+		if err := EnsureBrowser(); err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	// Create unified cache directories
 	for _, cacheDir := range []string{CacheDirHTML, CacheDirImages, CacheDirTitles} {
 		if err := os.MkdirAll(cacheDir, 0o755); err != nil {

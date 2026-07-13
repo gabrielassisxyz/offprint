@@ -22,7 +22,9 @@ The installer verifies the release checksum and writes to `~/.local/bin` by defa
 go install github.com/gabrielassisxyz/offprint/cmd/offprint@latest
 ```
 
-PDF generation additionally requires Chrome or Chromium. Markdown export does not launch a browser.
+PDF generation additionally requires Chrome or Chromium. If none is installed, Offprint says so
+before it downloads anything and offers to install one for you. `--format html` and the
+`archive` command never launch a browser and need none.
 
 ## Quick start
 
